@@ -2,23 +2,26 @@ package registry
 
 import (
 	"{{.PackagePath}}/application"
-	"{{.PackagePath}}/controller"	
+	"{{.PackagePath}}/application/infrastructure"
 )
 
 type {{LowerCase .RegistryName}}Registry struct {
-	application.HTTPHandler
+	MyInfrastructure infrastructure.MyInfrastructure
 }
 
-func New{{PascalCase .RegistryName}}Registry() application.RegistryVersion {
+func New{{PascalCase .RegistryName}}Registry(MyInfrastructure infrastructure.MyInfrastructure) application.Usecases {
 
 	app := {{LowerCase .RegistryName}}Registry{ //
-		HTTPHandler: application.NewHTTPHandler(":8080"),
+		MyInfrastructure: MyInfrastructure,
 	}
 
 	return &app
 
 }
 
-// RegisterUsecase is implementation of RegistryVersion.RegisterUsecase()
-func (r *{{LowerCase .RegistryName}}Registry) RegisterUsecase() {
+// RegisterUsecase is implementation of Runner.RegisterUsecase()
+func (r *{{LowerCase .RegistryName}}Registry) RegisterUsecase() map[string]interface{} {
+	usecaseMap := map[string]interface{}{}
+	
+	return usecaseMap
 }

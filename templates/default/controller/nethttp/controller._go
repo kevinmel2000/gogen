@@ -12,7 +12,12 @@ import (
 )
 
 // {{PascalCase .UsecaseName}} ...
-func {{PascalCase .UsecaseName}}Handler(inputPort port.{{PascalCase .UsecaseName}}Inport) http.HandlerFunc {
+func {{PascalCase .UsecaseName}}Handler(inputPortObj interface{}) http.HandlerFunc {
+
+	inputPort, ok := inputPortObj.(port.{{PascalCase .UsecaseName}}Inport)
+	if !ok {
+		panic("Cannot convert inputPort into {{PascalCase .UsecaseName}}Inport")
+	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
 

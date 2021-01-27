@@ -2,9 +2,16 @@ package main
 
 import (
 	"{{.PackagePath}}/application"
+	"{{.PackagePath}}/application/infrastructure"
 	"{{.PackagePath}}/application/registry"
+	"{{.PackagePath}}/application/router"
 )
 
 func main() {
-	application.Run(registry.New{{PascalCase .RegistryName}}Registry())
+
+	myInfrastructure := infrastructure.NewMyInfrastructure()
+	myRouter := router.NewMyRouter(myInfrastructure)
+	myRegistry := registry.New{{PascalCase .RegistryName}}Registry(myInfrastructure)
+
+	application.Run(myRouter, myRegistry)
 }

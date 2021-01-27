@@ -1,13 +1,27 @@
 package application
 
-type RegistryVersion interface {
-	RegisterUsecase()
+import "fmt"
+
+type Runner interface {
 	RunApplication()
+	RegisterRouter(x func(string) interface{})
 }
 
-func Run(rv RegistryVersion) {
+type Usecases interface {
+	RegisterUsecase() map[string]interface{}
+}
+
+func Run(rv Runner, uc Usecases) {
 	if rv != nil {
-		rv.RegisterUsecase()
+		rv.RegisterRouter(func(usecaseName string) interface{} {
+			usecaseMap := uc.RegisterUsecase()
+			usecase, exist := usecaseMap[usecaseName]
+			if !exist {
+				panic(fmt.Sprint("Usecase Name %s is not registered", usecaseName))
+			}
+			return usecase
+		})
+		
 		rv.RunApplication()
 	}
 }

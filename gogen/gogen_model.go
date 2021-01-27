@@ -57,3 +57,9 @@ type Registry struct {
 	UsecaseName    string //
 	GatewayName    string //
 }
+
+type StructureRouter struct {
+	ControllerName string //
+	UsecaseName    string //
+	PackagePath    string //
+}

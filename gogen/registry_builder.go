@@ -65,8 +65,11 @@ func (d *registryBuilder) Generate() error {
 		return fmt.Errorf("usecase %s is not found", PascalCase(usecaseName))
 	}
 
-	// create a folder with usecase name
 	CreateFolder("%s/application/registry", folderPath)
+
+	CreateFolder("%s/application/router", folderPath)
+
+	CreateFolder("%s/application/infrastructure", folderPath)
 
 	rg := StructureRegistry{
 		RegistryName: registryName,
@@ -86,106 +89,155 @@ func (d *registryBuilder) Generate() error {
 	)
 
 	_ = WriteFileIfNotExist(
-		"application/gracefully_shutdown._go",
-		fmt.Sprintf("%s/application/gracefully_shutdown.go", folderPath),
-		struct{}{},
-	)
-
-	var funcDeclareInjectedCode string
-
-	funcCallInjectedCode, _ := PrintTemplate("application/registry/func_call._go", d.RegistryBuilderRequest)
-
-	_ = WriteFileIfNotExist(
-		"application/http_handler._go",
-		fmt.Sprintf("%s/application/http_handler.go", folderPath),
+		"application/infrastructure/gracefully_shutdown._go",
+		fmt.Sprintf("%s/application/infrastructure/gracefully_shutdown.go", folderPath),
 		struct{}{},
 	)
 
 	_ = WriteFileIfNotExist(
-		"application/registry/registry._go",
-		fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName)),
-		rg,
+		"application/infrastructure/http_handler._go",
+		fmt.Sprintf("%s/application/infrastructure/http_handler.go", folderPath),
+		struct{}{},
 	)
 
-	funcDeclareInjectedCode, _ = PrintTemplate("application/registry/func_declaration._go", d.RegistryBuilderRequest)
+	_ = WriteFileIfNotExist(
+		"application/infrastructure/infrastructure._go",
+		fmt.Sprintf("%s/application/infrastructure/infrastructure.go", folderPath),
+		struct{}{},
+	)
 
-	// open registry file
+	// registry
+	{
 
-	registryFile := fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName))
-	file, err := os.Open(registryFile)
-	if err != nil {
-		return fmt.Errorf("not found registry file. You need to call 'gogen init .' first")
-	}
-	defer file.Close()
+		_ = WriteFileIfNotExist(
+			"application/registry/registry._go",
+			fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName)),
+			rg,
+		)
 
-	fSet := token.NewFileSet()
-	node, errParse := parser.ParseFile(fSet, registryFile, nil, parser.ParseComments)
-	if errParse != nil {
-		return errParse
-	}
+		funcCallInjectedCode, _ := PrintTemplate("application/registry/usecase_assign._go", d.RegistryBuilderRequest)
 
-	existingImportMap := ReadImports(node)
+		registryFile := fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName))
 
-	scanner := bufio.NewScanner(file)
-
-	methodCallMode := false
-	importMode := false
-	var buffer bytes.Buffer
-	for scanner.Scan() {
-		row := scanner.Text()
-
-		if methodCallMode {
-
-			if strings.HasPrefix(row, "}") {
-				methodCallMode = false
-				buffer.WriteString(funcCallInjectedCode)
-				buffer.WriteString("\n")
-			}
-			//else {
-			// TODO detecting if any method has been called
-			// }
-
+		fSet := token.NewFileSet()
+		node, errParse := parser.ParseFile(fSet, registryFile, nil, parser.ParseComments)
+		if errParse != nil {
+			return errParse
 		}
 
-		if strings.HasPrefix(row, fmt.Sprintf("func (r *%sRegistry) RegisterUsecase() {", CamelCase(registryName))) {
-			methodCallMode = true
+		existingImportMap := ReadImports(node)
 
-		} else //
+		file, _ := os.Open(registryFile)
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
 
-		if importMode && strings.HasPrefix(row, ")") {
-			importMode = false
+		methodCallMode := false
+		importMode := false
+		var buffer bytes.Buffer
+		for scanner.Scan() {
+			row := scanner.Text()
 
-			if _, exist := existingImportMap[fmt.Sprintf("\"%s/controller/%s\"", packagePath, controllerName)]; !exist {
-				buffer.WriteString(fmt.Sprintf("	\"%s/controller/%s\"", packagePath, controllerName))
-				buffer.WriteString("\n")
+			if methodCallMode {
+
+				if strings.HasPrefix(strings.TrimSpace(row), "return") {
+					methodCallMode = false
+					buffer.WriteString(funcCallInjectedCode)
+					buffer.WriteString("\n")
+				}
+
 			}
 
-			if _, exist := existingImportMap[fmt.Sprintf("\"%s/gateway/%s\"", packagePath, gatewayName)]; !exist {
-				buffer.WriteString(fmt.Sprintf("	\"%s/gateway/%s\"", packagePath, gatewayName))
-				buffer.WriteString("\n")
+			if strings.HasPrefix(row, fmt.Sprintf("func (r *%sRegistry) RegisterUsecase() map[string]interface{} {", CamelCase(registryName))) {
+				methodCallMode = true
+
+			} else //
+
+			if importMode && strings.HasPrefix(row, ")") {
+				importMode = false
+
+				// if _, exist := existingImportMap[fmt.Sprintf("\"%s/controller/%s\"", packagePath, controllerName)]; !exist {
+				// 	buffer.WriteString(fmt.Sprintf("	\"%s/controller/%s\"", packagePath, controllerName))
+				// 	buffer.WriteString("\n")
+				// }
+
+				if _, exist := existingImportMap[fmt.Sprintf("\"%s/gateway/%s\"", packagePath, gatewayName)]; !exist {
+					buffer.WriteString(fmt.Sprintf("	\"%s/gateway/%s\"", packagePath, gatewayName))
+					buffer.WriteString("\n")
+				}
+
+				if _, exist := existingImportMap[fmt.Sprintf("\"%s/usecase/%s\"", packagePath, LowerCase(usecaseName))]; !exist {
+					buffer.WriteString(fmt.Sprintf("	\"%s/usecase/%s\"", packagePath, LowerCase(usecaseName)))
+					buffer.WriteString("\n")
+				}
+
+			} else //
+
+			if strings.HasPrefix(row, "import (") {
+				importMode = true
+
 			}
 
-			if _, exist := existingImportMap[fmt.Sprintf("\"%s/usecase/%s\"", packagePath, LowerCase(usecaseName))]; !exist {
-				buffer.WriteString(fmt.Sprintf("	\"%s/usecase/%s\"", packagePath, LowerCase(usecaseName)))
-				buffer.WriteString("\n")
-			}
-
-		} else //
-
-		if strings.HasPrefix(row, "import (") {
-			importMode = true
-
+			buffer.WriteString(row)
+			buffer.WriteString("\n")
 		}
 
-		buffer.WriteString(row)
-		buffer.WriteString("\n")
+		if err := ioutil.WriteFile(fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName)), buffer.Bytes(), 0644); err != nil {
+			return err
+		}
+
 	}
 
-	buffer.WriteString(funcDeclareInjectedCode)
-	buffer.WriteString("\n")
+	// router
+	{
 
-	if err := ioutil.WriteFile(fmt.Sprintf("%s/application/registry/%s.go", folderPath, PascalCase(registryName)), buffer.Bytes(), 0644); err != nil {
-		return err
+		rg := StructureRouter{
+			ControllerName: controllerName,
+			PackagePath:    packagePath,
+			UsecaseName:    usecaseName,
+		}
+
+		_ = WriteFileIfNotExist(
+			"application/router/router._go",
+			fmt.Sprintf("%s/application/router/router.go", folderPath),
+			rg,
+		)
+
+		funcCallInjectedCode, _ := PrintTemplate("application/router/controller_usecase._go", d.RegistryBuilderRequest)
+
+		routerFile := fmt.Sprintf("%s/application/router/router.go", folderPath)
+
+		file, _ := os.Open(routerFile)
+		defer file.Close()
+		scanner := bufio.NewScanner(file)
+
+		methodCallMode := false
+		var buffer bytes.Buffer
+		for scanner.Scan() {
+			row := scanner.Text()
+
+			if methodCallMode {
+
+				if strings.HasPrefix(strings.TrimSpace(row), "}") {
+					methodCallMode = false
+					buffer.WriteString(funcCallInjectedCode)
+					buffer.WriteString("\n")
+				}
+
+			}
+
+			if strings.HasPrefix(row, "func (m *MyRouter) RegisterRouter(usecaseMap func(string)interface{}) {") {
+				methodCallMode = true
+
+			}
+
+			buffer.WriteString(row)
+			buffer.WriteString("\n")
+		}
+
+		if err := ioutil.WriteFile(fmt.Sprintf("%s/application/router/router.go", folderPath), buffer.Bytes(), 0644); err != nil {
+			return err
+		}
+
 	}
 
 	return nil

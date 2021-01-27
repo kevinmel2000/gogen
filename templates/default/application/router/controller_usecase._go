@@ -1,0 +1,1 @@
+  m.ServerMux.HandleFunc("/{{LowerCase .UsecaseName}}", controller.Authorized({{LowerCase .ControllerName}}.{{PascalCase .UsecaseName}}Handler(usecaseMap("{{PascalCase .UsecaseName}}"))))

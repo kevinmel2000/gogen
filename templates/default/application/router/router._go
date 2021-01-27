@@ -1,0 +1,26 @@
+package router
+
+import (
+	"{{.PackagePath}}/application/infrastructure"
+	"{{.PackagePath}}/controller"
+	"{{.PackagePath}}/controller/{{.ControllerName}}"
+)
+
+type MyRouter struct {
+	infrastructure.HTTPHandler
+	MyInfrastructure infrastructure.MyInfrastructure
+}
+
+func NewMyRouter(MyInfrastructure infrastructure.MyInfrastructure) *MyRouter {
+
+	app := MyRouter{ //
+		HTTPHandler:      infrastructure.NewHTTPHandler(":8080"),
+		MyInfrastructure: MyInfrastructure,
+	}
+
+	return &app
+
+}
+
+func (m *MyRouter) RegisterRouter(usecaseMap func(string)interface{}) {
+}

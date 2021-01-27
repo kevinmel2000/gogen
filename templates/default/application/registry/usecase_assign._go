@@ -1,0 +1,6 @@
+	{
+		outport := {{LowerCase .GatewayName}}.New{{PascalCase .UsecaseName}}Gateway()
+		inport := {{LowerCase .UsecaseName}}.New{{PascalCase .UsecaseName}}Usecase(outport)
+		usecaseMap["{{PascalCase .UsecaseName}}"] = inport 
+	}
+	

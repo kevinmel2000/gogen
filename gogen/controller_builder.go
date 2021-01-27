@@ -11,7 +11,6 @@ type ControllerBuilderRequest struct {
 	UsecaseName    string
 	ControllerName string
 	FolderPath     string
-	Framework      string
 }
 
 type controllerBuilder struct {
@@ -65,7 +64,7 @@ func (d *controllerBuilder) Generate() error {
 	CreateFolder("%s/controller/%s", folderPath, strings.ToLower(controllerName))
 
 	_ = WriteFileIfNotExist(
-		"controller/restapi/controller._go",
+		"controller/nethttp/controller._go",
 		fmt.Sprintf("%s/controller/%s/%s.go", folderPath, strings.ToLower(controllerName), PascalCase(usecaseName)),
 		ct,
 	)

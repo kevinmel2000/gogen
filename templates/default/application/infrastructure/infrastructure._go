@@ -1,0 +1,11 @@
+package infrastructure
+
+import "github.com/jinzhu/gorm"
+
+type MyInfrastructure struct {
+	DB *gorm.DB
+}
+
+func NewMyInfrastructure() MyInfrastructure {
+	return MyInfrastructure{}
+}
